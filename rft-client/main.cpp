@@ -44,15 +44,15 @@ int main(int argc, char* argv[]) {
             }
         }
     } catch (std::exception &e) {
-        FATAL << "Invalid command line arguments: " << e.what() << ENDL;
+        FATAL << "Invalid command line arguments: " << e.what() << std::endl;
         return(1);
     }
 
-    TRACE << "Command line arguments parsed." << ENDL;
-    TRACE << "\tServername: " << hostname << ENDL;
-    TRACE << "\tPort number: " << portNum << ENDL;
-    TRACE << "\tDebug Level: " << LOG_LEVEL << ENDL;
-    TRACE << "\tOutput file name: " << inputFilename << ENDL;
+    TRACE << "Command line arguments parsed." << std::endl;
+    TRACE << "\tServername: " << hostname << std::endl;
+    TRACE << "\tPort number: " << portNum << std::endl;
+    TRACE << "\tDebug Level: " << LOG_LEVEL << std::endl;
+    TRACE << "\tOutput file name: " << inputFilename << std::endl;
 
     // *********************************
     // * Open the input file
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
         // cleanup and close the file and network.
 
     } catch (std::exception &e) {
-        FATAL<< "Error: " << e.what() << ENDL;
+        FATAL<< "Error: " << e.what() << std::endl;
         exit(1);
     }
     return 0;
