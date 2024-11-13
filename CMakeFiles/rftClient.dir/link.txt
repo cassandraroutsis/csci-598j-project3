@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/rftClient.dir/unreliableTransport.cpp.o CMakeFiles/rftClient.dir/main.cpp.o CMakeFiles/rftClient.dir/datagram.cpp.o CMakeFiles/rftClient.dir/timerC.cpp.o -o rftClient

@@ -63,6 +63,10 @@ int main(int argc, char* argv[]) {
         // ***************************************************************
         // * Initialize your timer, window and the unreliableTransport etc.
         // **************************************************************
+        timerC timer(100); // FIXME: fix
+        int window = WINDOW_SIZE;
+        unreliableTransportC transport(); // FIXME: fix
+
 
 
         // ***************************************************************
