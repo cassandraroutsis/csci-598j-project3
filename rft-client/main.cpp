@@ -13,7 +13,8 @@
 #include "logging.h"
 
 
-#define WINDOW_SIZE 10
+#define WINDOW_SIZE 10 // "Your client must limit the window size to 10 datagrams"
+#define DEFAULT_TIMER_DURATION 100
 int main(int argc, char* argv[]) {
 
     // Defaults
@@ -57,16 +58,25 @@ int main(int argc, char* argv[]) {
     // *********************************
     // * Open the input file
     // *********************************
+    std::ifstream inputFile(inputFilename, std::ios::binary);
+    if (!inputFile.is_open()) {
+        FATAL << "Issue opening file " << inputFilename << std::endl;
+    }
 
     try {
 
         // ***************************************************************
         // * Initialize your timer, window and the unreliableTransport etc.
         // **************************************************************
-        timerC timer(100); // FIXME: fix
-        int window = WINDOW_SIZE;
-        unreliableTransportC transport(); // FIXME: fix
+        timerC timer(DEFAULT_TIMER_DURATION);
+        unreliableTransportC transport(hostname, portNum);
 
+        std::array<datagramS, WINDOW_SIZE> sndpkt; // array with an initial size of 10 store sent, unacknowledged packets
+        int sequnum = 0; 
+        int nextsequnum = 0;
+
+        // Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than 10 datagrams in the array. 
+        sndpkt[sequnum % 10].seqNum = nextseqnum;
 
 
         // ***************************************************************
@@ -77,11 +87,11 @@ int main(int argc, char* argv[]) {
         bool allAcked(false);
         while ((!allSent) && (!allAcked)) {
 	
-		// Is there space in the window? If so, read some data from the file and send it.
+            // Is there space in the window? If so, read some data from the file and send it.
 
-                // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
- 
-                // Check to see if the timer has expired.
+                    // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
+    
+                    // Check to see if the timer has expired.
 
         }
 
