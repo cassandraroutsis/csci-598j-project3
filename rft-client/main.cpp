@@ -107,6 +107,8 @@ int main(int argc, char* argv[]) {
         bool allSent(false);
         bool allAcked(false);
         while ((!allSent) && (!allAcked)) {
+            DEBUG << "allSend: " << allSent << " allAcked: " << allAcked << std::endl;
+
             // save the next index in sndpkt
             int windowIndex = nextsequnum % WINDOW_SIZE; 
             int baseIndex = base % WINDOW_SIZE;
@@ -170,19 +172,20 @@ int main(int argc, char* argv[]) {
                 }
             } else {
                 DEBUG << "Recieved ack for " << sndpkt[windowIndex].seqNum << std::endl;
-                base = base + windowIndex;
+                base = sndpkt[windowIndex].seqNum; // FIXME: might need +1
+                if (base == nextsequnum) {
+                    TRACE << "All packets have been acked." << std::endl;
+                    allAcked = true;
+                }
             }
-        
-            if (base == nextsequnum) {
+            if (base != nextsequnum) {
                 TRACE << "All packets have been acked." << std::endl;
-                allAcked = true;
-            } else {
-                TRACE << "Some packets need to be acked." << std::endl;
                 allAcked = false;
             }
         }
 
         // cleanup and close the file and network.
+        DEBUG << "Closnig up the file and transport" << std::endl;
         inputFile.close();
         transport.~unreliableTransportC();
 
