@@ -16,6 +16,17 @@
 
 #define WINDOW_SIZE 10 // "Your client must limit the window size to 10 datagrams"
 #define DEFAULT_TIMER_DURATION 100
+
+void makeDatagram(datagramS &datagram, size_t bytesread, int nextsequnum, char* buffer) {
+// fill in the datagram
+    memcpy(datagram.data, buffer, bytesread);
+    datagram.seqNum = nextsequnum;
+    datagram.payloadLength = bytesread; // FIXME: Might need to cast to uint8_t?  
+    datagram.checksum = computeChecksum(datagram);
+    TRACE << "Created datagram: " << toString(datagram) << std::endl;
+}
+
+
 int main(int argc, char* argv[]) {
 
     // Defaults
@@ -50,39 +61,41 @@ int main(int argc, char* argv[]) {
         return(1);
     }
 
-    TRACE << "Command line arguments parsed." << std::endl;
-    TRACE << "\tServername: " << hostname << std::endl;
-    TRACE << "\tPort number: " << portNum << std::endl;
-    TRACE << "\tDebug Level: " << LOG_LEVEL << std::endl;
-    TRACE << "\tOutput file name: " << inputFilename << std::endl;
+    INFO << "Command line arguments parsed." << std::endl;
+    INFO << "\tServername: " << hostname << std::endl;
+    INFO << "\tPort number: " << portNum << std::endl;
+    INFO << "\tDebug Level: " << LOG_LEVEL << std::endl;
+    INFO << "\tOutput file name: " << inputFilename << std::endl;
 
     // *********************************
     // * Open the input file
     // * The input files will be raw binary data. Do not try to treat them as if they contain strings.
     // *********************************
+    TRACE << "Opening input file: " << inputFilename << std::endl;
     std::ifstream inputFile(inputFilename, std::ios::binary);
     if (!inputFile.is_open()) {
         FATAL << "Issue opening file " << inputFilename << std::endl;
         return(1);
     }
+    TRACE << "Input file opened." << std::endl;
+
 
     try {
 
         // ***************************************************************
         // * Initialize your timer, window and the unreliableTransport etc.
         // **************************************************************
+        TRACE << "Initializing timer, window and the unreliableTransport etc." << std::endl;
         timerC timer = timerC();
         timer.setDuration(MAX_PAYLOAD_LENGTH); // precaution from ed
         unreliableTransportC transport(hostname, portNum);
+        TRACE << "unreliableTransport initialized with hostname, portNum: " << hostname << ", " << portNum << std::endl;
 
         // array with an initial size of 10 store sent, unacknowledged packets
+        TRACE << "Initializign sndpkt array with WINDOW_SIZE: " << WINDOW_SIZE << std::endl;
         std::array<datagramS, WINDOW_SIZE> sndpkt; 
         int nextsequnum = 1;
-        // int base = 0; // don't need the base of only keeping array of WINDOW_SIZE
 
-        // // Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than 10 datagrams in the array. 
-        // sndpkt[sequnum % 10].seqNum = nextseqnum;
-        // const size_t datagramSize = sizeof(datagramS);
         char buffer[MAX_PAYLOAD_LENGTH]; // HiTA suggested using a buffer to get the data from the fs
 
 
@@ -98,38 +111,38 @@ int main(int argc, char* argv[]) {
             // WINDOW_SIZE - 1 reflects a full sndpkt array. 
             // if ((nextsequnum % WINDOW_SIZE) < (WINDOW_SIZE-1) ) {// FIXME: GNB
                 
+                // clear the buffer
+                memset(buffer, 0, sizeof(buffer));
+
                 // Read the data in chunks of datagrams... 
+                TRACE << "Reading a chunck of data" << std::endl;
                 inputFile.read(buffer, MAX_PAYLOAD_LENGTH);
                 size_t bytesread = inputFile.gcount();
-                TRACE << "Read " << bytesread << " from " << inputFilename << std::endl;
+                DEBUG << "Read " << bytesread << " from " << inputFilename << ", data: " << buffer << std::endl;
 
                 // if there was data read: 
                 if (bytesread > 0) {
-                    // add datagram to the sndpkt for safe keeping.
+                    // add datagram to the sndpkt for safe keeping. Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than WINDOW_SIZE datagrams in the array. 
                     datagramS &datagram = sndpkt[nextsequnum % WINDOW_SIZE];
-
-                    // fill in the datagram
-                    memcpy(datagram.data, buffer, bytesread);
-                    datagram.seqNum = nextsequnum;
-                    datagram.payloadLength = bytesread; // FIXME: Might need to cast to uint8_t?  
-                    datagram.checksum = computeChecksum(datagram);
+                    makeDatagram(datagram, bytesread, nextsequnum, buffer);
 
                     // send datagram
+                    DEBUG << "Sending datagram: " << toString(datagram) << std::endl;
                     transport.udt_send(datagram);
-                    TRACE << "Sending datagram " << nextsequnum << std::endl;
+                    TRACE << "Sent datagram" << std::endl;
 
                 } else {
+                    INFO << "All data has been sent." << std::endl; 
                     allSent = true;
-                    TRACE << "All data has been sent." << std::endl; 
 
                     // When a valid datagram with a payload length of zero is received, the server assumes the end of the file. 
                     // It closes the output file and quits.
+                    DEBUG << "Send datagram with payload length of zero so server knows eof" << std::endl;
                     datagramS &datagram = sndpkt[nextsequnum % WINDOW_SIZE];
-                    datagram.seqNum = nextsequnum;
-                    datagram.payloadLength = 0; // FIXME: Might need to cast to uint8_t?  
-                    datagram.checksum = computeChecksum(datagram);
+                    makeDatagram(datagram, bytesread, nextsequnum, buffer);
 
                     // send datagram
+                    DEBUG << "Sending datagram: " << toString(datagram) << std::endl;
                     transport.udt_send(datagram);
                 }
 
@@ -139,20 +152,24 @@ int main(int argc, char* argv[]) {
 
 
             // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
+            TRACE << "udt_recieve() to see if there is an acknowledgment" << std::endl;
             while (!transport.udt_receive(sndpkt[nextsequnum % WINDOW_SIZE]))
             {
                 // Check to see if the timer has expired. If timeout, resend according to gbn
                 if (timer.timeout()) {
-                    TRACE << "Timeout occured for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
+                    DEBUG << "Timeout occured for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
                 }
             }
             
-            TRACE << "Recieved ack for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
+            DEBUG << "Recieved ack for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
 
             nextsequnum++;
+            TRACE << "Increment sequence number to " << nextsequnum << std::endl;
         }
 
         // cleanup and close the file and network.
+        inputFile.close();
+        transport.~unreliableTransportC();
 
     } catch (std::exception &e) {
         FATAL<< "Error: " << e.what() << std::endl;
