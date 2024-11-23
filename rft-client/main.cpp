@@ -166,8 +166,7 @@ int main(int argc, char* argv[]) {
                     DEBUG << "Timeout occured for " << sndpkt[windowIndex].seqNum << std::endl;
 
                     for (int i = baseIndex; i < windowIndex; i++) {
-                        transport.udt_send(sndpkt[i]);
-                        TRACE << "Resending datagram: " << toString(sndpkt[i]);
+                        transport.udt_send(sndpkt[windowIndex]);
                     }
                 }
             } else {
