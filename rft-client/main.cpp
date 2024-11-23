@@ -3,6 +3,7 @@
 //
 #include <iostream>
 #include <fstream>
+#include <cstring>
 #include <sys/socket.h>
 #include <system_error>
 #include <unistd.h>
@@ -57,10 +58,12 @@ int main(int argc, char* argv[]) {
 
     // *********************************
     // * Open the input file
+    // * The input files will be raw binary data. Do not try to treat them as if they contain strings.
     // *********************************
     std::ifstream inputFile(inputFilename, std::ios::binary);
     if (!inputFile.is_open()) {
         FATAL << "Issue opening file " << inputFilename << std::endl;
+        return(1);
     }
 
     try {
@@ -68,15 +71,19 @@ int main(int argc, char* argv[]) {
         // ***************************************************************
         // * Initialize your timer, window and the unreliableTransport etc.
         // **************************************************************
-        timerC timer(DEFAULT_TIMER_DURATION);
+        timerC timer = timerC();
+        timer.setDuration(MAX_PAYLOAD_LENGTH); // precaution from ed
         unreliableTransportC transport(hostname, portNum);
 
-        std::array<datagramS, WINDOW_SIZE> sndpkt; // array with an initial size of 10 store sent, unacknowledged packets
-        int sequnum = 0; 
-        int nextsequnum = 0;
+        // array with an initial size of 10 store sent, unacknowledged packets
+        std::array<datagramS, WINDOW_SIZE> sndpkt; 
+        int nextsequnum = 1;
+        // int base = 0; // don't need the base of only keeping array of WINDOW_SIZE
 
-        // Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than 10 datagrams in the array. 
-        sndpkt[sequnum % 10].seqNum = nextseqnum;
+        // // Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than 10 datagrams in the array. 
+        // sndpkt[sequnum % 10].seqNum = nextseqnum;
+        // const size_t datagramSize = sizeof(datagramS);
+        char buffer[MAX_PAYLOAD_LENGTH]; // HiTA suggested using a buffer to get the data from the fs
 
 
         // ***************************************************************
@@ -85,14 +92,64 @@ int main(int argc, char* argv[]) {
         // **************************************************************
         bool allSent(false);
         bool allAcked(false);
-        while ((!allSent) && (!allAcked)) {
+        while ((!allSent)){ // FIXME: GBN && (!allAcked)) {
 	
             // Is there space in the window? If so, read some data from the file and send it.
+            // WINDOW_SIZE - 1 reflects a full sndpkt array. 
+            // if ((nextsequnum % WINDOW_SIZE) < (WINDOW_SIZE-1) ) {// FIXME: GNB
+                
+                // Read the data in chunks of datagrams... 
+                inputFile.read(buffer, MAX_PAYLOAD_LENGTH);
+                size_t bytesread = inputFile.gcount();
+                TRACE << "Read " << bytesread << " from " << inputFilename << std::endl;
 
-                    // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
-    
-                    // Check to see if the timer has expired.
+                // if there was data read: 
+                if (bytesread > 0) {
+                    // add datagram to the sndpkt for safe keeping.
+                    datagramS &datagram = sndpkt[nextsequnum % WINDOW_SIZE];
 
+                    // fill in the datagram
+                    memcpy(datagram.data, buffer, bytesread);
+                    datagram.seqNum = nextsequnum;
+                    datagram.payloadLength = bytesread; // FIXME: Might need to cast to uint8_t?  
+                    datagram.checksum = computeChecksum(datagram);
+
+                    // send datagram
+                    transport.udt_send(datagram);
+                    TRACE << "Sending datagram " << nextsequnum << std::endl;
+
+                } else {
+                    allSent = true;
+                    TRACE << "All data has been sent." << std::endl; 
+
+                    // When a valid datagram with a payload length of zero is received, the server assumes the end of the file. 
+                    // It closes the output file and quits.
+                    datagramS &datagram = sndpkt[nextsequnum % WINDOW_SIZE];
+                    datagram.seqNum = nextsequnum;
+                    datagram.payloadLength = 0; // FIXME: Might need to cast to uint8_t?  
+                    datagram.checksum = computeChecksum(datagram);
+
+                    // send datagram
+                    transport.udt_send(datagram);
+                }
+
+
+
+            // } // FIXME: gbn
+
+
+            // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
+            while (!transport.udt_receive(sndpkt[nextsequnum % WINDOW_SIZE]))
+            {
+                // Check to see if the timer has expired. If timeout, resend according to gbn
+                if (timer.timeout()) {
+                    TRACE << "Timeout occured for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
+                }
+            }
+            
+            TRACE << "Recieved ack for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
+
+            nextsequnum++;
         }
 
         // cleanup and close the file and network.
