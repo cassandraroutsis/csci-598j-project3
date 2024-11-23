@@ -95,6 +95,7 @@ int main(int argc, char* argv[]) {
         TRACE << "Initializign sndpkt array with WINDOW_SIZE: " << WINDOW_SIZE << std::endl;
         std::array<datagramS, WINDOW_SIZE> sndpkt; 
         int nextsequnum = 1;
+        int base = 1;
 
         char buffer[MAX_PAYLOAD_LENGTH]; // HiTA suggested using a buffer to get the data from the fs
 
@@ -105,11 +106,13 @@ int main(int argc, char* argv[]) {
         // **************************************************************
         bool allSent(false);
         bool allAcked(false);
-        while ((!allSent)){ // FIXME: GBN && (!allAcked)) {
+        while ((!allSent) && (!allAcked)) {
+            // save the next index in sndpkt
+            int windowIndex = nextsequnum % WINDOW_SIZE; 
+            int baseIndex = base % WINDOW_SIZE;
 	
             // Is there space in the window? If so, read some data from the file and send it.
-            // WINDOW_SIZE - 1 reflects a full sndpkt array. 
-            // if ((nextsequnum % WINDOW_SIZE) < (WINDOW_SIZE-1) ) {// FIXME: GNB
+            if (nextsequnum < (base + WINDOW_SIZE) ) {
                 
                 // clear the buffer
                 memset(buffer, 0, sizeof(buffer));
@@ -123,7 +126,7 @@ int main(int argc, char* argv[]) {
                 // if there was data read: 
                 if (bytesread > 0) {
                     // add datagram to the sndpkt for safe keeping. Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than WINDOW_SIZE datagrams in the array. 
-                    datagramS &datagram = sndpkt[nextsequnum % WINDOW_SIZE];
+                    datagramS &datagram = sndpkt[windowIndex];
                     makeDatagram(datagram, bytesread, nextsequnum, buffer);
 
                     // send datagram
@@ -138,33 +141,41 @@ int main(int argc, char* argv[]) {
                     // When a valid datagram with a payload length of zero is received, the server assumes the end of the file. 
                     // It closes the output file and quits.
                     DEBUG << "Send datagram with payload length of zero so server knows eof" << std::endl;
-                    datagramS &datagram = sndpkt[nextsequnum % WINDOW_SIZE];
+                    datagramS &datagram = sndpkt[windowIndex];
                     makeDatagram(datagram, bytesread, nextsequnum, buffer);
 
                     // send datagram
                     DEBUG << "Sending datagram: " << toString(datagram) << std::endl;
                     transport.udt_send(datagram);
                 }
-
-
-
-            // } // FIXME: gbn
+                nextsequnum++;
+                TRACE << "Incrementing sequence number" << std::endl;
+            } else {
+                DEBUG << "No space in sndpkt" << std::endl;
+            }
 
 
             // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
             TRACE << "udt_recieve() to see if there is an acknowledgment" << std::endl;
-            while (!transport.udt_receive(sndpkt[nextsequnum % WINDOW_SIZE]))
+            if (transport.udt_receive(sndpkt[windowIndex]) == 0)
             {
                 // Check to see if the timer has expired. If timeout, resend according to gbn
                 if (timer.timeout()) {
-                    DEBUG << "Timeout occured for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
-                }
-            }
-            
-            DEBUG << "Recieved ack for " << sndpkt[nextsequnum % WINDOW_SIZE].seqNum << std::endl;
+                    DEBUG << "Timeout occured for " << sndpkt[windowIndex].seqNum << std::endl;
 
-            nextsequnum++;
-            TRACE << "Increment sequence number to " << nextsequnum << std::endl;
+                    for (int i = baseIndex; i < windowIndex; i++) {
+                        transport.udt_send(sndpkt[windowIndex]);
+                    }
+                }
+            } else {
+                DEBUG << "Recieved ack for " << sndpkt[windowIndex].seqNum << std::endl;
+                base = nextsequnum;
+            }
+        
+            if (base == nextsequnum) {
+                TRACE << "All packets have been acked." << std::endl;
+                allAcked = true;
+            }
         }
 
         // cleanup and close the file and network.
