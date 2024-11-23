@@ -15,10 +15,10 @@
 
 
 #define WINDOW_SIZE 10 // "Your client must limit the window size to 10 datagrams"
-#define DEFAULT_TIMER_DURATION 100
+#define DEFAULT_TIMER_DURATION 1000
 
 void makeDatagram(datagramS &datagram, size_t bytesread, int nextsequnum, char* buffer) {
-// fill in the datagram
+    // fill in the datagram
     memcpy(datagram.data, buffer, bytesread);
     datagram.seqNum = nextsequnum;
     datagram.payloadLength = bytesread; // FIXME: Might need to cast to uint8_t?  
@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
         // * Initialize your timer, window and the unreliableTransport etc.
         // **************************************************************
         TRACE << "Initializing timer, window and the unreliableTransport etc." << std::endl;
-        timerC timer = timerC();
-        timer.setDuration(MAX_PAYLOAD_LENGTH); // precaution from ed
+        timerC timer = timerC(DEFAULT_TIMER_DURATION);
+        timer.setDuration(DEFAULT_TIMER_DURATION);
         unreliableTransportC transport(hostname, portNum);
         TRACE << "unreliableTransport initialized with hostname, portNum: " << hostname << ", " << portNum << std::endl;
 
@@ -106,15 +106,17 @@ int main(int argc, char* argv[]) {
         // **************************************************************
         bool allSent(false);
         bool allAcked(false);
-        while ((!allSent) && (!allAcked)) {
+        timer.start();
+        while ((!allSent) || (!allAcked)) {
             DEBUG << "allSend: " << allSent << " allAcked: " << allAcked << std::endl;
 
             // save the next index in sndpkt
             int windowIndex = nextsequnum % WINDOW_SIZE; 
             int baseIndex = base % WINDOW_SIZE;
+            int oldseqnum = nextsequnum;
 	
             // Is there space in the window? If so, read some data from the file and send it.
-            if (nextsequnum < (base + WINDOW_SIZE) ) {
+            if ((!allSent) && (oldseqnum < (base + WINDOW_SIZE))) {
                 
                 // clear the buffer
                 memset(buffer, 0, sizeof(buffer));
@@ -129,7 +131,7 @@ int main(int argc, char* argv[]) {
                 if (bytesread > 0) {
                     // add datagram to the sndpkt for safe keeping. Use modular arithmetic when indexing the sndpkt array, ensuing there are never more than WINDOW_SIZE datagrams in the array. 
                     datagramS &datagram = sndpkt[windowIndex];
-                    makeDatagram(datagram, bytesread, nextsequnum, buffer);
+                    makeDatagram(datagram, bytesread, oldseqnum, buffer);
 
                     // send datagram
                     DEBUG << "Sending datagram: " << toString(datagram) << std::endl;
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
                     // It closes the output file and quits.
                     DEBUG << "Send datagram with payload length of zero so server knows eof" << std::endl;
                     datagramS &datagram = sndpkt[windowIndex];
-                    makeDatagram(datagram, bytesread, nextsequnum, buffer);
+                    makeDatagram(datagram, bytesread, oldseqnum, buffer);
 
                     // send datagram
                     DEBUG << "Sending datagram: " << toString(datagram) << std::endl;
@@ -159,27 +161,39 @@ int main(int argc, char* argv[]) {
 
             // Call udt_recieve() to see if there is an acknowledgment.  If there is, process it.
             TRACE << "udt_recieve() to see if there is an acknowledgment" << std::endl;
-            if (transport.udt_receive(sndpkt[windowIndex]) == 0)
+            datagramS ackedDatagram;
+            if (transport.udt_receive(ackedDatagram) > 0)
             {
-                // Check to see if the timer has expired. If timeout, resend according to gbn
-                if (timer.timeout()) {
-                    DEBUG << "Timeout occured for " << sndpkt[windowIndex].seqNum << std::endl;
-
-                    for (int i = baseIndex; i < windowIndex; i++) {
-                        transport.udt_send(sndpkt[windowIndex]);
-                    }
-                }
-            } else {
-                DEBUG << "Recieved ack for " << sndpkt[windowIndex].seqNum << std::endl;
-                base = sndpkt[windowIndex].seqNum; // FIXME: might need +1
-                if (base == nextsequnum) {
+                DEBUG << "Recieved ackNum: " << ackedDatagram.ackNum << " at base: " << base << std::endl;
+                base = ackedDatagram.ackNum+1;
+                if (base >= nextsequnum) {
                     TRACE << "All packets have been acked." << std::endl;
                     allAcked = true;
+                    timer.start();
+                }
+            } else {
+                DEBUG << "No ack recieved. "<< std:: endl;
+                // Check to see if the timer has expired. If timeout, resend according to gbn
+                if (timer.timeout()) {
+                    DEBUG << "Timeout occured." << std::endl;
+
+                    // resend:
+                    for (int i = base; i < oldseqnum; i++) {
+                        transport.udt_send(sndpkt[i % WINDOW_SIZE]);
+                    }
                 }
             }
-            if (base != nextsequnum) {
-                TRACE << "All packets have been acked." << std::endl;
+
+            
+            if (base < nextsequnum) {
+                TRACE << "All packets have not been acked: " << base << "<" << nextsequnum << std::endl;
                 allAcked = false;
+            }
+            if (allSent) {
+                if (base >= nextsequnum-1) {
+                    DEBUG << "All ***relevent*** packets have been acked." << std::endl;
+                    allAcked = true;
+                }
             }
         }
 
