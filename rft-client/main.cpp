@@ -164,21 +164,17 @@ int main(int argc, char* argv[]) {
                     DEBUG << "Timeout occured for " << sndpkt[windowIndex].seqNum << std::endl;
 
                     for (int i = baseIndex; i < windowIndex; i++) {
-                        transport.udt_send(sndpkt[i]);
-                        TRACE << "Resending datagram: " << toString(sndpkt[i]);
+                        transport.udt_send(sndpkt[windowIndex]);
                     }
                 }
             } else {
                 DEBUG << "Recieved ack for " << sndpkt[windowIndex].seqNum << std::endl;
-                base = base + windowIndex;
+                base = nextsequnum;
             }
         
             if (base == nextsequnum) {
                 TRACE << "All packets have been acked." << std::endl;
                 allAcked = true;
-            } else {
-                TRACE << "Some packets need to be acked." << std::endl;
-                allAcked = false;
             }
         }
 
