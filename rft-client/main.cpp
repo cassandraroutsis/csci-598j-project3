@@ -169,8 +169,9 @@ int main(int argc, char* argv[]) {
                 if (base >= nextsequnum) {
                     TRACE << "All packets have been acked." << std::endl;
                     allAcked = true;
-                    timer.start();
-                }
+                    if (allSent) break;
+                } 
+                timer.start();
             } else {
                 DEBUG << "No ack recieved. "<< std:: endl;
                 // Check to see if the timer has expired. If timeout, resend according to gbn
@@ -178,7 +179,7 @@ int main(int argc, char* argv[]) {
                     DEBUG << "Timeout occured." << std::endl;
 
                     // resend:
-                    for (int i = base; i < oldseqnum; i++) {
+                    for (int i = base; i < nextsequnum; i++) {
                         transport.udt_send(sndpkt[i % WINDOW_SIZE]);
                     }
                 }
@@ -190,7 +191,7 @@ int main(int argc, char* argv[]) {
                 allAcked = false;
             }
             if (allSent) {
-                if (base >= nextsequnum-1) {
+                if (base >= oldseqnum) {
                     DEBUG << "All ***relevent*** packets have been acked." << std::endl;
                     allAcked = true;
                 }
