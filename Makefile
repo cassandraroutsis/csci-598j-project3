@@ -133,9 +133,20 @@ rftClient/fast:
 # Target rules for targets named submit
 
 # Build rule for target.
-submit: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 submit
-.PHONY : submit
+#
+# This might work to create the submission tarball in the formal I asked for.
+#
+submit:
+	@if [ -z "${USERNAME}" ]; then \
+		echo "USERNAME variable is not set."; \
+	else \
+		echo "USERNAME variable is set to ${USERNAME}."; \
+		rm -f core project3 ${OBJ_FILES}; \
+		mkdir ${USERNAME}; \
+		cp Makefile README.md *.h *.cpp ${USERNAME}; \
+		tar zcf ${USERNAME}.tgz ${USERNAME}; \
+		echo "Don't forget to upload ${USERNAME}.tgz to Canvas."; \
+	fi
 
 # fast build rule for target.
 submit/fast:
