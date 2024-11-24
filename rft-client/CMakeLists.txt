@@ -31,12 +31,12 @@ execute_process(COMMAND ${WHOAMI} OUTPUT_VARIABLE CURRENT_USER OUTPUT_STRIP_TRAI
 # Add a custom target named 'submit'
 add_custom_target(submit
         COMMAND ${CMAKE_COMMAND} -E echo "Getting the current username..."
-        COMMAND ${CMAKE_COMMAND} -E echo "Username: ${CURRENT_USER}"
+        COMMAND ${CMAKE_COMMAND} -E echo "Username: croutsis"
         COMMAND ${CMAKE_COMMAND} -E echo "Creating directory named after the user..."
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/${CURRENT_USER}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/croutsis
         COMMAND ${CMAKE_COMMAND} -E echo "Copying source files to the users directory..."
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FULL_PATHS} ${CMAKE_BINARY_DIR}/${CURRENT_USER}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FULL_PATHS} ${CMAKE_BINARY_DIR}/croutsis
         COMMAND ${CMAKE_COMMAND} -E echo "Creating tarball of the directory..."
-        COMMAND ${CMAKE_COMMAND} -E tar czf ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_USER}.tar.gz ${CMAKE_BINARY_DIR}/${CURRENT_USER}
-        COMMAND ${CMAKE_COMMAND} -E echo "Submission tarball created: ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_USER}.tar.gz"
+        COMMAND ${CMAKE_COMMAND} -E tar czf ${CMAKE_CURRENT_SOURCE_DIR}/croutsis.tar.gz ${CMAKE_BINARY_DIR}/croutsis
+        COMMAND ${CMAKE_COMMAND} -E echo "Submission tarball created: ${CMAKE_CURRENT_SOURCE_DIR}/croutsis.tar.gz"
 )

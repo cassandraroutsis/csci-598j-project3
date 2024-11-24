@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /snap/cmake/1425/bin/cmake
+CMAKE_COMMAND = /snap/cmake/1429/bin/cmake
 
 # The command to remove a file.
-RM = /snap/cmake/1425/bin/cmake -E rm -f
+RM = /snap/cmake/1429/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -67,15 +67,15 @@ include CMakeFiles/submit.dir/compiler_depend.make
 include CMakeFiles/submit.dir/progress.make
 
 CMakeFiles/submit:
-	/snap/cmake/1425/bin/cmake -E echo Getting\ the\ current\ username...
-	/snap/cmake/1425/bin/cmake -E echo Username:\ seed
-	/snap/cmake/1425/bin/cmake -E echo Creating\ directory\ named\ after\ the\ user...
-	/snap/cmake/1425/bin/cmake -E make_directory /mnt/adit/vdi/csci-598j-project3/seed
-	/snap/cmake/1425/bin/cmake -E echo Copying\ source\ files\ to\ the\ users\ directory...
-	/snap/cmake/1425/bin/cmake -E copy_if_different /mnt/adit/vdi/csci-598j-project3/rft-client/unreliableTransport.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/unreliableTransport.h /mnt/adit/vdi/csci-598j-project3/rft-client/main.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/logging.h /mnt/adit/vdi/csci-598j-project3/rft-client/datagram.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/datagram.h /mnt/adit/vdi/csci-598j-project3/rft-client/timerC.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/timerC.h /mnt/adit/vdi/csci-598j-project3/seed
-	/snap/cmake/1425/bin/cmake -E echo Creating\ tarball\ of\ the\ directory...
-	/snap/cmake/1425/bin/cmake -E tar czf /mnt/adit/vdi/csci-598j-project3/rft-client/seed.tar.gz /mnt/adit/vdi/csci-598j-project3/seed
-	/snap/cmake/1425/bin/cmake -E echo Submission\ tarball\ created:\ /mnt/adit/vdi/csci-598j-project3/rft-client/seed.tar.gz
+	/snap/cmake/1429/bin/cmake -E echo Getting\ the\ current\ username...
+	/snap/cmake/1429/bin/cmake -E echo Username:\ croutsis
+	/snap/cmake/1429/bin/cmake -E echo Creating\ directory\ named\ after\ the\ user...
+	/snap/cmake/1429/bin/cmake -E make_directory /mnt/adit/vdi/csci-598j-project3/croutsis
+	/snap/cmake/1429/bin/cmake -E echo Copying\ source\ files\ to\ the\ users\ directory...
+	/snap/cmake/1429/bin/cmake -E copy_if_different /mnt/adit/vdi/csci-598j-project3/rft-client/unreliableTransport.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/unreliableTransport.h /mnt/adit/vdi/csci-598j-project3/rft-client/main.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/logging.h /mnt/adit/vdi/csci-598j-project3/rft-client/datagram.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/datagram.h /mnt/adit/vdi/csci-598j-project3/rft-client/timerC.cpp /mnt/adit/vdi/csci-598j-project3/rft-client/timerC.h /mnt/adit/vdi/csci-598j-project3/croutsis
+	/snap/cmake/1429/bin/cmake -E echo Creating\ tarball\ of\ the\ directory...
+	/snap/cmake/1429/bin/cmake -E tar czf /mnt/adit/vdi/csci-598j-project3/rft-client/croutsis.tar.gz /mnt/adit/vdi/csci-598j-project3/croutsis
+	/snap/cmake/1429/bin/cmake -E echo Submission\ tarball\ created:\ /mnt/adit/vdi/csci-598j-project3/rft-client/croutsis.tar.gz
 
 CMakeFiles/submit.dir/codegen:
 .PHONY : CMakeFiles/submit.dir/codegen
